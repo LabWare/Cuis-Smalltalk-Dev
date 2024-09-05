@@ -1,6 +1,6 @@
-'From Cuis7.1 [latest update: #6609] on 26 August 2024 at 04:38:25 PM'!
+'From Cuis7.1 [latest update: #6609] on 5 September 2024 at 01:33:38 PM'!
 'Description '!
-!provides: 'Locales' 1 17!
+!provides: 'Locales' 1 18!
 SystemOrganization addCategory: #Locales!
 
 
@@ -16,7 +16,7 @@ ISOLanguageDefinition class
 
 !classDefinition: #Locale category: #Locales!
 Object subclass: #Locale
-	instanceVariableNames: 'id shortDateFormat longDateFormat timeFormat timeLeadingZero timeSeparator decimalSymbol digitGrouping currencySymbol currencyNotation currencyFractions negativeCurrencyFormat measurement timezoneOffset dstActive leadingChar displayCountry displayLanguage dateOrder dateSeparator hasLeadingZero fractionDigits am pm'
+	instanceVariableNames: 'id shortDateFormat longDateFormat timeFormat timeLeadingZero timeSeparator decimalSymbol digitGrouping currencySymbol currencyFormat currencyFractions negativeCurrencyFormat measurement timezoneOffset dstActive leadingChar displayCountry displayLanguage dateOrder dateSeparator hasLeadingZero fractionDigits am pm'
 	classVariableNames: 'Activated Current CurrentPlatform KnownLocales LanguageSymbols LocaleChangeListeners PlatformEncodings Previous'
 	poolDictionaries: ''
 	category: 'Locales'!
@@ -2593,15 +2593,16 @@ amString
 amString: aString
 	am := aString! !
 
-!Locale methodsFor: 'accessing' stamp: 'mir 8/21/2024 16:31'!
-country
-	"Return the string used for country"
-	^self isoCountry! !
-
-!Locale methodsFor: 'accessing' stamp: 'mir 8/21/2024 16:34'!
-countryDisplayName
-	"Return the string used for country"
-	^self primDisplayCountry! !
+!Locale methodsFor: 'accessing' stamp: 'mir 9/4/2024 15:25:12'!
+currencyFormat
+	"Return platform iCurrency value as per \
+	https://docs.microsoft.com/en-us/windows/win32/intl/locale-icurrency
+		0	Prefix, no separation, for example, $1.1
+		1	Suffix, no separation, for example, 1.1$
+		2	Prefix, 1-character separation, for example, $ 1.1
+		3	Suffix, 1-character separation, for example, 1.1 $
+		"
+  	^currencyFormat ifNil: [currencyFormat := self primCurrencyFormat]! !
 
 !Locale methodsFor: 'accessing' stamp: 'mir 6/21/2024 17:33'!
 currencyFractionDigits
@@ -2613,15 +2614,6 @@ currencyFractionDigits: anInteger
 	currencyFractions := anInteger! !
 
 !Locale methodsFor: 'accessing' stamp: 'mir 6/21/2024 17:33'!
-currencyNotation
-	"Returns boolean if symbol is pre- (true) or post-fix (false)"
-	^currencyNotation ifNil: [currencyNotation := self primCurrencyNotation]! !
-
-!Locale methodsFor: 'accessing' stamp: 'mir 6/21/2024 16:47'!
-currencyNotation: aBoolean
-	currencyNotation := aBoolean! !
-
-!Locale methodsFor: 'accessing' stamp: 'mir 6/21/2024 17:33'!
 currencySymbol
 	"return a string for the currency symbol used "
 	^currencySymbol ifNil: [currencySymbol := self primCurrencySymbol]! !
@@ -2629,18 +2621,6 @@ currencySymbol
 !Locale methodsFor: 'accessing' stamp: 'mir 6/21/2024 16:45'!
 currencySymbol: aString
 	currencySymbol := aString.! !
-
-!Locale methodsFor: 'accessing' stamp: 'mir 6/21/2024 17:33'!
-dateComponentOrder
-	"returns order of m,d,y entries.
-		MDY 0
-		DMY 1
-		YMD 2"
-	^dateOrder ifNil: [dateOrder := self primDateComponentOrder]! !
-
-!Locale methodsFor: 'accessing' stamp: 'mir 6/21/2024 17:19'!
-dateComponentOrder: anInteger
-	dateOrder := anInteger! !
 
 !Locale methodsFor: 'accessing' stamp: 'mir 6/21/2024 17:34'!
 dateSeparator
@@ -2859,12 +2839,6 @@ primCurrencyFractionDigits
 	^2
 ! !
 
-!Locale methodsFor: 'system primitives' stamp: 'tpr 6/1/2005 18:45'!
-primCurrencyNotation
-	"Returns boolean if symbol is pre- (true) or post-fix (false)"
-	<primitive: 'primitiveCurrencyNotation' module: 'LocalePlugin'>
-	^true! !
-
 !Locale methodsFor: 'system primitives' stamp: 'mir 6/21/2024 16:45'!
 primCurrencySymbol
 	"Return a string for the currency symbol used "
@@ -2877,20 +2851,13 @@ primDST
 	<primitive:'primitiveDaylightSavings' module: 'LocalePlugin'>
 	^false! !
 
-!Locale methodsFor: 'system primitives' stamp: 'mir 6/21/2024 17:20'!
-primDateComponentOrder
-	"returns order of m,d,y entries.
-		MDY 0
-		DMY 1
-		YMD 2"
-	<primitive:'primitiveDateComponentOrder' module: 'LocalePlugin'>
-	^0! !
-
-!Locale methodsFor: 'system primitives' stamp: 'mir 6/21/2024 17:22'!
+!Locale methodsFor: 'system primitives' stamp: 'mir 8/27/2024 16:13:44'!
 primDateSeparator
 	"Return the character used for date separator e.g. /"
-	<primitive:'primitiveDateSeparator' module: 'LocalePlugin'>
-	^'/'! !
+"	<primitive:'primitiveDateSeparator' module: 'LocalePlugin'>
+	^'/' "
+	^self shortDateFormat do: [:char | char isAlphaNumeric ifFalse: [^char asString]]
+	! !
 
 !Locale methodsFor: 'system primitives' stamp: 'mir 6/21/2024 16:33'!
 primDecimalSymbol
@@ -2955,22 +2922,6 @@ primMeasurement
 	^true
 ! !
 
-!Locale methodsFor: 'system primitives' stamp: 'mir 6/21/2024 16:54'!
-primNegativeCurrencyFormat
-	"Answer the current system value for negative currency format.
-					0 = ($1)
-					1 = -$1
-					2 = $-1
-					3 = $1-
-					4 = (1$)
-					5 = -1$
-					6 = 1-$
-					7 = 1$-.
-"
-	<primitive:'primitiveNNegativeCurrencyFormat' module: 'LocalePlugin'>
-	^2
-! !
-
 !Locale methodsFor: 'system primitives' stamp: 'mir 6/21/2024 17:31'!
 primPmString
 	"Return the string used for time pm"
@@ -3007,16 +2958,17 @@ primTimeFormat
 	<primitive:'primitiveTimeFormat' module: 'LocalePlugin'>
 	^'h:mmx'! !
 
-!Locale methodsFor: 'system primitives' stamp: 'mir 8/22/2024 17:02'!
+!Locale methodsFor: 'system primitives' stamp: 'mir 8/27/2024 15:52:42'!
 primTimeLeadingZero
 	"return false = no leading zero (9:15:24)), true = leading zero (09:15:24))"
-	^(self primTimeFormat asLowercase indexOfSubCollection: 'hh') > 0! !
+	^(self primTimeFormat asLowercase indexOfSubCollection: 'hh' startingAt: 1) > 0! !
 
-!Locale methodsFor: 'system primitives' stamp: 'mir 8/26/2024 16:24:37'!
+!Locale methodsFor: 'system primitives' stamp: 'mir 8/27/2024 16:13:55'!
 primTimeSeparator
 	"Return the character used for time separator e.g. :"
-	<primitive:'primitiveTimeSeparatorSymbol' module: 'LocalePlugin'>
-	^':'! !
+"	<primitive:'primitiveTimeSeparatorSymbol' module: 'LocalePlugin'>
+	^':' "
+	^self timeFormat do: [:char | char isAlphaNumeric ifFalse: [^char asString]]! !
 
 !Locale methodsFor: 'system primitives' stamp: 'tpr 6/2/2005 13:43'!
 primTimezone
@@ -3067,6 +3019,32 @@ fetchISOCountry
 	| countryCode |
 	countryCode := self primCountry.
 	^countryCode copyUpTo: 0 asCharacter! !
+
+!Locale methodsFor: 'initialize-release' stamp: 'mir 9/4/2024 15:26:31'!
+resetCache
+	shortDateFormat := nil.
+	longDateFormat := nil.
+	timeFormat := nil.
+	timeLeadingZero := nil.
+	timeSeparator := nil.
+	decimalSymbol := nil.
+	digitGrouping := nil.
+	currencySymbol := nil.
+	currencyFormat := nil.
+	currencyFractions := nil.
+	negativeCurrencyFormat := nil.
+	measurement := nil.
+	timezoneOffset := nil.
+	dstActive := nil.
+	leadingChar := nil.
+	displayCountry := nil.
+	displayLanguage := nil.
+	dateOrder := nil.
+	dateSeparator := nil.
+	hasLeadingZero := nil.
+	fractionDigits := nil.
+	am := nil.
+	pm := nil! !
 
 !Locale class methodsFor: 'system startup' stamp: 'hlsf 7/3/2022 13:08:00'!
 startUp: resuming
