@@ -1,6 +1,6 @@
-'From Cuis7.7 [latest update: #7908] on 4 May 2026 at 12:58:31 pm'!
+'From Cuis7.7 [latest update: #7907] on 4 May 2026 at 1:15:49 pm'!
 'Description Rename extentions tests'!
-!provides: 'BaseImageTests' 1 479!
+!provides: 'BaseImageTests' 1 480!
 !requires: '__Refactoring-TestData__' 1 0 nil!
 SystemOrganization addCategory: #'BaseImageTests-Compiler'!
 SystemOrganization addCategory: #'BaseImageTests-Kernel-Objects'!
@@ -25700,7 +25700,7 @@ test05ScanClassRemovalChange
 
 ! !
 
-!ChangesTest methodsFor: 'scan tests' stamp: 'jmv 4/May/2026 12:58:21'!
+!ChangesTest methodsFor: 'scan tests' stamp: 'jmv 4/May/2026 13:15:42'!
 test06ScanClassRenamedChange
 
 	| classRenamedChange newClass |
@@ -25711,7 +25711,7 @@ test06ScanClassRenamedChange
 
 		classRenamedChange := self scanChangesFromFile last.
 
-		self assert: classRenamedChange isClassRenaming.
+		self assert: classRenamedChange isClassRenamed.
 		self assert: classRenamedChange changeClassName equals: self testDataClassName.
 		self assert: classRenamedChange newClassName equals: #NewTestClass__.
 		self deny: classRenamedChange stamp isNil. ]
