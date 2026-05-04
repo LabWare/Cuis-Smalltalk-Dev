@@ -247,6 +247,7 @@ The callback invocation's sender will be the context making the callout.
 Callbacks return to external code using a special primitive that does a longjmp back to the callback's entry-point into the VM.
 Callbacks are aware of their nesting so that if a callback attempts to return out of LIFO sequence it will suspend until any nested callbacks have returned.
 
+<a id="threaded-ffi"></a>
 ### The Threaded FFI
 This section is specific to the Threaded VM only, and discusses
 - how threads share the VM and the points at which threads take control of and/or release the VM
@@ -276,6 +277,7 @@ The operations ownVM and disownVM are very simple, lock-free operations, much ch
 - any and all callouts may potentially thread
 - short-running callouts are not penalised since ownVM and disownVM are cheap operations relative to marshalling, callout and return.
 
+<a id="threaded-callbacks"></a>
 #### Threaded Callbacks
 If a callback occurs then the callback invokes ownVM, blocking until it is the highest-priority executable thread.
 A callback either originates from a thread making a call-out, in which case its priority is that of the priority of the Process that made the callout,
@@ -287,6 +289,7 @@ The FCP's priority can be chosen, and hence prioritises foreign callbacks relati
 
 [^9]: the heartbeat could be set to a higher frequency, for example 5 KHz, to obtain an average latency of 100 microseconds before a thread is available
 
+<a id="thread-affinity"></a>
 #### Thread Affinity
 When a Smalltalk process makes an FFI callout it becomes "affined" (from affinity) to the currently executing thread, and will remain affined until the callout returns.
 Nested callbacks and callouts within an affined process will stay affined for the dynamic extent of the outermost callout and hence occur on the same thread.
@@ -297,6 +300,7 @@ Threads known to the threded VM that can run Smalltalk (including those introduc
 A Smalltalk process has a **threadAffinity** inst var that is normally nil, meaning it can run on any thread. In a callout if a Process's threadAffinity is nil it will be set to the thread id of the current thread, affining it for the dynamic extent of the callout, threadAffinity being reset to nil on return of the callout.
 The programmer can set threadAffinity through the simple threadAffinity: accessor. Setting threadAffinity to a negative integer causes that Process to run on any thread other than the thread whose ID is the positive value of that negative threadAffinity.
 
+<a id="collecting-errors"></a>
 #### Collecting Errors in Threaded Callouts
 There is a preemption point on a callout returning before it executes Smalltalk.
 Since a returning callout may block in ownVM another thread may make a callout before the blocking thread can continue.
