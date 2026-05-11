@@ -1,6 +1,6 @@
-'From Cuis7.7 [latest update: #7907] on 4 May 2026 at 1:15:49 pm'!
+'From Cuis7.7 [latest update: #7913] on 11 May 2026 at 12:22:32 pm'!
 'Description Rename extentions tests'!
-!provides: 'BaseImageTests' 1 480!
+!provides: 'BaseImageTests' 1 481!
 !requires: '__Refactoring-TestData__' 1 0 nil!
 SystemOrganization addCategory: #'BaseImageTests-Compiler'!
 SystemOrganization addCategory: #'BaseImageTests-Kernel-Objects'!
@@ -6429,7 +6429,7 @@ test4
 
 	self assert: prettyPrinted equals: source! !
 
-!PrettyPrintingTest methodsFor: 'testing' stamp: 'jmv 31/Jul/2023 11:32:13'!
+!PrettyPrintingTest methodsFor: 'testing' stamp: 'jmv 11/May/2026 11:56:11'!
 test5
 	"
 	self new test5
@@ -6442,13 +6442,12 @@ test5
 		print;
 		print;
 		print;
-		
-			with: [
-				self print.
-				self print ]
-			do: [
-				self print.
-				self print ].'.
+		with: [
+			self print.
+			self print ]
+		do: [
+			self print.
+			self print ].'.
 
 	prettyPrinted := Compiler format: source in: PrettyPrintingTest notifying: nil.
 
@@ -6470,6 +6469,38 @@ test6
 		do: [
 			self print.
 			self print ].'.
+
+	prettyPrinted := Compiler format: source in: PrettyPrintingTest notifying: nil.
+
+	self assert: prettyPrinted equals: source! !
+
+!PrettyPrintingTest methodsFor: 'testing' stamp: 'jmv 11/May/2026 11:56:58'!
+test7
+	"
+	self new test7
+	"
+	| prettyPrinted source |
+
+	source := 
+'sample7: x
+	x with: [ self print ]  do: [ self print ].'.
+
+	prettyPrinted := Compiler format: source in: PrettyPrintingTest notifying: nil.
+
+	self assert: prettyPrinted equals: source! !
+
+!PrettyPrintingTest methodsFor: 'testing' stamp: 'jmv 11/May/2026 11:57:09'!
+test8
+	"
+	self new test8
+	"
+	| prettyPrinted source |
+
+	source := 
+'sample8: x
+	x
+		print;
+		with: [ self print ] do: [ self print ].'.
 
 	prettyPrinted := Compiler format: source in: PrettyPrintingTest notifying: nil.
 
