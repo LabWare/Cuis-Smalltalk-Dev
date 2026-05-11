@@ -1,6 +1,6 @@
-'From Cuis7.7 [latest update: #7779] on 23 December 2025 at 4:33:01 pm'!
+'From Cuis7.7 [latest update: #7914] on 11 May 2026 at 3:08:40 pm'!
 'Description '!
-!provides: 'Goodies' 1 11!
+!provides: 'Goodies' 1 12!
 SystemOrganization addCategory: #'Goodies-AsyncFile'!
 SystemOrganization addCategory: #'Goodies-Collections'!
 SystemOrganization addCategory: #'Goodies-Tools-FileList'!
@@ -100,7 +100,7 @@ MappedCollection class
 
 !classDefinition: #StandardFileMenu category: #'Goodies-Tools-FileList'!
 SelectionMenu subclass: #StandardFileMenu
-	instanceVariableNames: 'canTypeFileName pattern excludePattern'
+	instanceVariableNames: 'operationMode pattern excludePattern'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'Goodies-Tools-FileList'!
@@ -166,18 +166,33 @@ See the comment of IdentitySet for more information.
 I represent an access mechanism for a sequencable collection re-ordering or filtering its elements.!
 
 !StandardFileMenu commentStamp: '<historical>' prior: 0!
-I represent a SelectionMenu which operates like a modal dialog for selecting files, somewhat similar to the StandardFile dialogs in MacOS and Java Swing.
+I represent a SelectionMenu which operates like a modal dialog to select a files ro directory, somewhat similar to the StandardFile dialogs in MacOS and Java Swing.
 
 Try for example, the following:
 
+ - To pick a file entry:
+
 	(StandardFileMenu oldFileFrom: DirectoryEntry smalltalkImageDirectory) inspect
-	
+
+	((StandardFileMenu new 
+		newFileFrom: DirectoryEntry smalltalkImageDirectory withPattern: '*.st') startUpWithCaption: 'Pick-up a file Dave') inspect
+
 	(StandardFileMenu new 
 		oldFileFrom: DirectoryEntry smalltalkImageDirectory withPattern: '*.st' excludePattern: '.*';
-		startUpWithCaption: 'Pick up a Smalltalk file') 	inspect
+		startUpWithCaption: 'Pick up a Smalltalk file') inspect
+
+ - To pick a directory entry:
+
+	(StandardFileMenu oldDirectoryFrom: DirectoryEntry smalltalkImageDirectory) inspect
 	
-	((StandardFileMenu new 
-		newFileFrom: DirectoryEntry smalltalkImageDirectory withPattern: '*.st') startUpWithCaption: 'dale') inspect!
+	(StandardFileMenu new newDirectoryFrom: DirectoryEntry smalltalkImageDirectory;
+		startUpWithCaption: 'Pick-up a directory to back-up your data') inspect
+
+	(StandardFileMenu new
+		oldDirectoryFrom: DirectoryEntry smalltalkImageDirectory;
+		startUpWithCaption: 'Pick-up a directory Dave, to save your soul') inspect
+		
+!
 
 !ProtocolCatcher methodsFor: 'catching' stamp: 'jmv 3/Nov/2008 13:03:00'!
 doesNotUnderstand: aMessage
@@ -999,44 +1014,56 @@ advance: anInteger containingDirectoriesFrom: aDirectory
 	1 to: anInteger do: [:i | theDirectory _ theDirectory parent].
 	^theDirectory! !
 
+!StandardFileMenu methodsFor: 'private' stamp: 'hlsf 3/May/2026 12:29:41'!
+newDirectoryFrom: aDirectory
+
+	operationMode := #pickupOrNewDirectory.
+	^self makeFileMenuFor: aDirectory! !
+
 !StandardFileMenu methodsFor: 'private' stamp: 'hlsf 25/Jul/2023 17:46:51'!
 newFileFrom: aDirectory withPattern: aPattern
 
 	self newFileFrom: aDirectory withPattern: aPattern excludePattern: nil! !
 
-!StandardFileMenu methodsFor: 'private' stamp: 'hlsf 25/Jul/2023 17:46:25'!
+!StandardFileMenu methodsFor: 'private' stamp: 'hlsf 3/May/2026 11:30:44'!
 newFileFrom: aDirectory withPattern: aPattern excludePattern: anotherPattern
 
-	canTypeFileName := true.
+	operationMode := #pickupOrNewFile.
 	self pattern: aPattern.
 	self excludePattern: anotherPattern.
 	^self makeFileMenuFor: aDirectory! !
 
-!StandardFileMenu methodsFor: 'private' stamp: 'acg 15/Apr/1999 22:03:00'!
+!StandardFileMenu methodsFor: 'private' stamp: 'hlsf 3/May/2026 11:32:23'!
+oldDirectoryFrom: aDirectory
+
+	operationMode := #pickupDirectory.
+	^self makeFileMenuFor: aDirectory! !
+
+!StandardFileMenu methodsFor: 'private' stamp: 'hlsf 3/May/2026 11:28:42'!
 oldFileFrom: aDirectory
 
-	canTypeFileName _ false.
+	operationMode := #pickupFile.
 	^self makeFileMenuFor: aDirectory! !
 
 !StandardFileMenu methodsFor: 'private' stamp: 'hlsf 25/Jul/2023 17:48:32'!
 oldFileFrom: aDirectory withPattern: aPattern
 	self oldFileFrom: aDirectory withPattern: aPattern excludePattern: nil! !
 
-!StandardFileMenu methodsFor: 'private' stamp: 'hlsf 25/Jul/2023 17:48:02'!
+!StandardFileMenu methodsFor: 'private' stamp: 'hlsf 3/May/2026 11:28:42'!
 oldFileFrom: aDirectory withPattern: aPattern excludePattern: anotherPattern
 
-	canTypeFileName := false.
+	operationMode := #pickupFile.
 	self pattern: aPattern.
 	self excludePattern: anotherPattern.
 	^self makeFileMenuFor: aDirectory! !
 
-!StandardFileMenu methodsFor: 'basic control sequences' stamp: 'KenD 27/Oct/2015 19:00:00'!
+!StandardFileMenu methodsFor: 'basic control sequences' stamp: 'hlsf 3/May/2026 11:00:56'!
 confirmExistingFiles: aResult
 
 	|choice|
 	(aResult directory includesKey: aResult name) ifFalse: [^aResult].
 	
-	choice _ (PopUpMenu
+	choice := (PopUpMenu
 		labels:
 'overwrite that file
 choose another name
@@ -1052,55 +1079,57 @@ already exists.'.
 'Can''t delete ', aResult name, '
 Select another file'].
 		^aResult].
-	choice = 2 ifTrue: [^self startUpWithCaption: 'Select Another File'].
+	choice = 2 ifTrue: [^self startUpWithCaption: 'Select another file'].
 	^nil
  ! !
 
-!StandardFileMenu methodsFor: 'basic control sequences' stamp: 'jmv 12/Sep/2024 12:05:29'!
-getTypedFileName: aResult
-
-	| name |
+!StandardFileMenu methodsFor: 'basic control sequences' stamp: 'hlsf 3/May/2026 12:05:55'!
+getEntryName: aResult
+	| name message |		
+	message := self isSelectFile 
+		ifTrue: ['Enter a new file name'] 
+		ifFalse: ['Enter a new directory name'].
 	name := StringRequestMorph 
-		request: 'Enter a new file name' 
+		request: message
 		initialAnswer: ''.
-	name = '' ifTrue: [^self startUpWithCaption: 'Select a File:' ].
-	^ StandardFileMenuResult
-			directory: (aResult directory)
-			name: name
-! !
+	name = '' ifTrue: [
+		message := self isSelectFile 
+			ifTrue:[ 'Select a file'] 
+			ifFalse: ['Select a directory'].
+		self startUpWithCaption: message].
+	^ StandardFileMenuResult	directory: aResult directory name: name! !
 
-!StandardFileMenu methodsFor: 'basic control sequences' stamp: 'jmv 27/Jul/2018 20:59:10'!
+!StandardFileMenu methodsFor: 'basic control sequences' stamp: 'hlsf 3/May/2026 12:05:55'!
 startUpWithCaption: aString at: location allowKeyboard: aBoolean
 
 	|result|
-	result _ super startUpWithCaption: aString at: location allowKeyboard: aBoolean.
+	result := super startUpWithCaption: aString at: location allowKeyboard: aBoolean.
 	result ifNil: [^nil].
 	result isDirectory ifTrue:
 		[self makeFileMenuFor: result directory.
 		 ^self startUpWithCaption: aString at: location allowKeyboard: aBoolean].
 	result isCommand ifTrue: 
-		[result _ self getTypedFileName: result.
+		[result := self getEntryName: result.
 		result ifNil: [^nil]].
-	canTypeFileName ifTrue: [^self confirmExistingFiles: result].
+	self canTypeFileName ifTrue: [^self confirmExistingFiles: result].
 	^result
 	! !
 
-!StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 25/Jul/2023 23:33:54'!
+!StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 3/May/2026 10:59:33'!
 directoryNamesString: aDirectory
 "Answer a string concatenating the directory name strings in aDirectory, each string followed by a '[...]' indicator, and followed by a newLine."
-
-	^ String streamContents: 		[:s | 
-		(self matchingDirectories: aDirectory) do: 				[:subDirectory |	 
+	^ String streamContents: [:s | 
+		(self matchingDirectories: aDirectory) do: [:subDirectory |	 
 			s nextPutAll: subDirectory name withBlanksTrimmed , ' [...]'; newLine]]
 
 ! !
 
-!StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 25/Jul/2023 23:45:13'!
+!StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 3/May/2026 10:59:24'!
 fileNamesString: aDirectory
 "Answer a string concatenating the file name strings in aDirectory, each string followed by a newLine."
 
-	^String streamContents: 		[:s | 
-		(self matchingFiles: aDirectory) do: 	[:file |
+	^String streamContents: [:s | 
+		(self matchingFiles: aDirectory) do: [:file |
 			s nextPutAll: file name withBlanksTrimmed; newLine]]! !
 
 !StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 25/Jul/2023 23:48:19'!
@@ -1116,42 +1145,42 @@ makeFileMenuFor: aDirectory
 	theMenu := self selections: (self menuSelectionsArray: aDirectory).
 	^theMenu! !
 
-!StandardFileMenu methodsFor: 'menu building' stamp: 'acg 15/Apr/1999 21:57:00'!
+!StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 3/May/2026 12:25:48'!
 menuLabelsString: aDirectory
 "Answer a menu labels object corresponding to aDirectory"
 
 	^ String streamContents: 
 		[:s | 
-			canTypeFileName ifTrue: 
-				[s nextPutAll: 'Enter File Name...'; newLine].
+			self canTypeFileName ifTrue: [s nextPutAll: 'Enter new file name...'; newLine].
+			self canTypeDirectoryName ifTrue: [s nextPutAll: 'Enter new directory name...'; newLine].
 			s nextPutAll: (self pathPartsString: aDirectory).
 			s nextPutAll: (self directoryNamesString: aDirectory).
-			s nextPutAll: (self fileNamesString: aDirectory).
+			self isSelectFile ifTrue: [s nextPutAll: (self fileNamesString: aDirectory)].
+			self isSelectDirectory ifTrue: [s nextPutAll: (aDirectory name  ifNil: ['[]']); newLine].
 			s skip: -1]! !
 
-!StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 25/Jul/2023 23:47:12'!
+!StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 3/May/2026 12:09:14'!
 menuLinesArray: aDirectory
 "Answer a menu lines object corresponding to aDirectory"
 
 	| typeCount nameCnt dirDepth|
-	typeCount := canTypeFileName 
-		ifTrue: [1] 
-		ifFalse: [0].
+	typeCount := self canTypeEntry ifTrue: [1] ifFalse: [0].
 	nameCnt := (self matchingDirectories: aDirectory) size.
 	dirDepth := aDirectory pathComponents size.
-	^Array streamContents: [:s |
-		canTypeFileName ifTrue: [s nextPut: 1].
+	^ Array streamContents: [:s |
+		self canTypeEntry ifTrue: [s nextPut: 1].
 		s nextPut: dirDepth + typeCount + 1.
-		s nextPut: dirDepth + nameCnt + typeCount + 1]! !
+		s nextPut: dirDepth + nameCnt + typeCount + 1
+	]! !
 
-!StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 25/Jul/2023 23:43:56'!
+!StandardFileMenu methodsFor: 'menu building' stamp: 'hlsf 3/May/2026 12:26:07'!
 menuSelectionsArray: aDirectory
 "Answer a menu selections object corresponding to aDirectory.  The object is an array corresponding to each item, each element itself constituting a two-element array, the first element of which contains a selector to operate on and the second element of which contains the parameters for that selector."
 
 	|dirSize|
 	dirSize := aDirectory pathComponents size.
 	^Array streamContents: [:s |
-		canTypeFileName ifTrue:
+		self canTypeEntry ifTrue:
 			[s nextPut: (StandardFileMenuResult
 				directory: aDirectory
 				name: nil)].
@@ -1165,13 +1194,16 @@ menuSelectionsArray: aDirectory
 					containingDirectoriesFrom: aDirectory)
 				name: '')].
 		(self matchingDirectories: aDirectory)		 do: 
-			[:dir | 	s nextPut: (StandardFileMenuResult
+			[:dir | s nextPut: (StandardFileMenuResult
 					directory: dir
 					name: '')].
-		(self matchingFiles: aDirectory) do: 
-			[:file | 	s nextPut: (StandardFileMenuResult
+		self isSelectFile ifTrue: [(self matchingFiles: aDirectory) do: 
+				[:file | s nextPut: (StandardFileMenuResult
 					directory: aDirectory
-					name: file name)]]! !
+					name: file name)	] ].
+		self isSelectDirectory ifTrue: [ s nextPut: (StandardFileMenuResult 
+			directory: aDirectory name: (aDirectory name  ifNil: ['[]']))]
+		]! !
 
 !StandardFileMenu methodsFor: 'menu building' stamp: 'jmv 2/Apr/2016 23:07:00'!
 pathPartsString: aDirectory
@@ -1223,19 +1255,39 @@ patternMatches: aString
 
 	^pattern anySatisfy: [ :pat | pat match: aString ]! !
 
-!StandardFileMenu class methodsFor: 'standard file operations' stamp: 'jmv 21/Jan/2013 22:59:00'!
-oldFileFrom: aDirectory
+!StandardFileMenu methodsFor: 'testing' stamp: 'hlsf 3/May/2026 11:29:30'!
+canTypeDirectoryName
+	^ operationMode = #pickupOrNewDirectory! !
 
-	^(self oldFileMenu: aDirectory)
-		startUpWithCaption: 'Select a File:'! !
+!StandardFileMenu methodsFor: 'testing' stamp: 'hlsf 3/May/2026 11:40:03'!
+canTypeEntry
+	^ self canTypeFileName or: [self canTypeDirectoryName]! !
 
-!StandardFileMenu class methodsFor: 'instance creation' stamp: 'pb 25/May/2016 01:13:00'!
-oldFileMenu: aDirectory
+!StandardFileMenu methodsFor: 'testing' stamp: 'hlsf 3/May/2026 11:29:33'!
+canTypeFileName
+	^ operationMode = #pickupOrNewFile! !
 
+!StandardFileMenu methodsFor: 'testing' stamp: 'hlsf 3/May/2026 11:31:28'!
+isSelectDirectory
+	^ operationMode = #pickupOrNewDirectory or: [operationMode = #pickupDirectory]! !
+
+!StandardFileMenu methodsFor: 'testing' stamp: 'hlsf 3/May/2026 11:30:36'!
+isSelectFile
+	^ operationMode = #pickupOrNewFile or: [operationMode = #pickupFile]! !
+
+!StandardFileMenu class methodsFor: 'standard file operations' stamp: 'hlsf 3/May/2026 11:49:29'!
+oldDirectoryFrom: aDirectory
 	(aDirectory isKindOf: DirectoryEntry)
 		ifFalse: [ self error: 'I require a DirectoryEntry'].
+	^(self new oldDirectoryFrom: aDirectory)
+		startUpWithCaption: 'Select a directory'! !
 
-	^self new oldFileFrom: aDirectory! !
+!StandardFileMenu class methodsFor: 'standard file operations' stamp: 'hlsf 3/May/2026 11:21:53'!
+oldFileFrom: aDirectory
+	(aDirectory isKindOf: DirectoryEntry)
+		ifFalse: [ self error: 'I require a DirectoryEntry'].
+	^(self new oldFileFrom: aDirectory)
+		startUpWithCaption: 'Select a file'! !
 
 !Collection methodsFor: '*Goodies-Collections' stamp: 'LC 18/Jun/2001 20:30:00'!
 asIdentitySkipList
