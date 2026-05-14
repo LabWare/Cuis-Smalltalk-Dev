@@ -23,7 +23,7 @@ classify: element under: heading suppressIfDefault: aBoolean
 
 	(categoryArray indexOf: realHeading) = 0 ifTrue: [
 		"If it looks like a new package makes sense, help the user by creating it."
-		CodePackage maybeCreatePackageForSystemCategory: realHeading.
+		"CodePackage maybeCreatePackageForSystemCategory: realHeading."
 		self addCategory: realHeading ].
 
 	catIndex := categoryArray indexOf: realHeading.
